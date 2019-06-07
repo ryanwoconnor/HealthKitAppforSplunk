@@ -1,5 +1,15 @@
 <form>
   <label>HealthKit Data from Today</label>
+  
+    <search id="baseSearch">
+    <query>
+      index=$index$ sourcetype="apple*" name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent 
+    </query>
+              <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+                    <sampleRatio>1</sampleRatio>
+
+  </search>
   <fieldset submitButton="false">
     <input type="dropdown" token="index">
       <label>Index</label>
@@ -11,6 +21,8 @@
         <latest>now</latest>
       </search>
       <choice value="iot">iot</choice>
+      <default>iot</default>
+      <initialValue>iot</initialValue>
     </input>
     <input type="time" token="field1">
       <label></label>
@@ -36,13 +48,10 @@
     <panel>
       <title>Total Steps</title>
       <single>
-        <search>
-          <query>index="$index$" sourcetype="apple:steps" name="$name$"
-| dedup uuid
-| stats sum(steps)</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
+        <search base="baseSearch">
+          <query>
+| timechart span=1d max(steps) as stepsTotal
+| stats sum(stepsTotal)</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -52,43 +61,12 @@
       </single>
     </panel>
     <panel>
-      <title>Most Recent Heart Rate</title>
+      <title>Total Move</title>
       <single>
-        <search>
-          <query>index=$index$ sourcetype="apple:heartrate" name="$name$"
-| dedup uuid
-| head 1
-| table bpm</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
-      </single>
-    </panel>
-    <panel>
-      <title>Total Hours of Sleep</title>
-      <single>
-        <search>
-          <query>index=$index$ sourcetype=apple:sleep startDate=* AND endDate=* name="$name$"
-| dedup startDate endDate sourcetype 
-| eval start_time=strptime(startDate,"%Y-%m-%dT%H:%M:%SZ") 
-| eval end_time=strptime(endDate,"%Y-%m-%dT%H:%M:%SZ") 
-| eval now=now() 
-| eval start_time=start_time-18000
-| eval end_time=end_time-18000
-| eval duration=end_time-start_time 
-| eval _time=strftime(start_time,"%F %T") 
-| eval start_diff=now-start_time 
-| where start_diff&lt;86400
-| stats count by _time name duration 
-| table _time name duration
-| eval duration = (duration * 1000)
-| stats sum(duration) as total_seconds
-| eval "Total Hours of Sleep" = round(total_seconds/1000/60/60,1)
-| fields - total_seconds</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
+        <search base="baseSearch">
+          <query>search index=$index$ sourcetype="apple:total:move" name="$name$"
+| timechart span=1d max(kcal) as moveTotal
+| stats sum(moveTotal)</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -97,12 +75,37 @@
     <panel>
       <title>Total Minutes of Exercise</title>
       <single>
-        <search>
-          <query>index=$index$ sourcetype="apple:exercise"  name="$name$"
+        <search base="baseSearch">
+          <query>
 | dedup uuid
 | stats sum(exerciseminutes)</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Total Stand</title>
+      <single>
+        <search base="baseSearch">
+          <query>
+| timechart span=1d max(standTotal) as standTotal
+| stats sum(standTotal)</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Most Recent Heart Rate</title>
+      <single>
+        <search base="baseSearch">
+          <query>search index=$index$ sourcetype="apple:heartrate" name="$name$"
+| dedup uuid
+| head 1
+| table bpm</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -111,13 +114,11 @@
     <panel>
       <title>Total Mindful Seconds</title>
       <single>
-        <search>
-          <query>index=$index$ sourcetype="apple:mindful" uuid=* name="$name$"
+        <search base="baseSearch">
+          <query>
 | dedup uuid 
 | stats sum(mindfulseconds) as mindfulseconds 
 | eval mindfulseconds=mindfulseconds/60</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -126,12 +127,10 @@
     <panel>
       <title>Battery Percent</title>
       <chart>
-        <search>
-          <query>index="$index$" sourcetype="apple:systeminfo" name="$name$"
+        <search base="baseSearch">
+          <query>
 | dedup sourcetype
 | table batterypercent</query>
-          <earliest>-24h@h</earliest>
-          <latest>now</latest>
         </search>
         <option name="charting.chart">markerGauge</option>
         <option name="charting.chart.rangeValues">[0,30,70,100]</option>
@@ -142,55 +141,14 @@
   </row>
   <row>
     <panel>
-      <title>Sleep over the last 24 Hours</title>
-      <viz type="timeline_app.timeline">
-        <search>
-          <query>index=$index$ sourcetype=apple:sleep startDate=* AND endDate=*  name="$name$"
-| dedup startDate endDate sourcetype 
-| rex mode=sed field=endDate "s/Z/ -00:00/"
-| rex mode=sed field=startDate "s/Z/ -00:00/"
-| eval start_time=strptime(startDate,"%Y-%m-%dT%H:%M:%S %Z") 
-| eval end_time=strptime(endDate,"%Y-%m-%dT%H:%M:%S %Z") 
-| eval now=now() 
-| eval duration=end_time-start_time 
-| eval _time=strftime(start_time,"%F %T") 
-| eval start_diff=now-start_time 
-| where start_diff&lt;86400
-| stats count by _time name duration 
-| table _time name duration
-| eval duration = (duration * 1000)</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
-        <option name="timeline_app.timeline.axisTimeFormat">SECONDS</option>
-        <option name="timeline_app.timeline.colorMode">categorical</option>
-        <option name="timeline_app.timeline.maxColor">#DA5C5C</option>
-        <option name="timeline_app.timeline.minColor">#FFE8E8</option>
-        <option name="timeline_app.timeline.numOfBins">9</option>
-        <option name="timeline_app.timeline.tooltipTimeFormat">SECONDS</option>
-        <option name="timeline_app.timeline.useColors">0</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </viz>
-    </panel>
-  </row>
-  <row>
-    <panel>
       <title>Heart Rate Over Time Today</title>
       <chart>
-        <search>
-          <query>index=$index$ sourcetype=apple:heartrate  name="$name$"
+        <search base="baseSearch">
+          <query>search index=$index$ sourcetype=apple:heartrate  name="$name$"
 | dedup uuid
 | bucket span=1m _time
 | stats  max(bpm) as bpm by _time
 | eventstats avg(bpm) as average_bpm</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -231,14 +189,9 @@
     <panel>
       <title>Steps Over Time</title>
       <chart>
-        <search>
-          <query>index=$index$ sourcetype="apple:steps" name="$name$"
-| dedup  uuid
-| sort 0 + _time
-| streamstats sum(steps) as steps
-| timechart span=1m max(steps) as steps</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
+        <search base="baseSearch">
+          <query>search index=iot sourcetype="apple:total:steps" name="Ryan"
+| timechart span=5m max(steps) as steps</query>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.chart.nullValueMode">connect</option>
@@ -249,14 +202,11 @@
     <panel>
       <title>Steps Walked Throughout the Day</title>
       <chart>
-        <search>
-          <query>index=$index$ sourcetype="apple:steps" name="$name$"
+        <search base="baseSearch">
+          <query>search index=$index$ sourcetype="apple:steps" name="$name$"
 | dedup  uuid
 | table _time steps
 | timechart span=30m sum(steps) as steps</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -297,15 +247,9 @@
     <panel>
       <title>Total Hours Standing</title>
       <chart>
-        <search>
-          <query>index=$index$ sourcetype="apple:stand" name="$name$"
-| dedup  uuid
-| sort 0 + _time
-| eval count=1
-| streamstats sum(count) as count
-| timechart span=1m max(count) as count</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
+        <search base="baseSearch">
+          <query> 
+| timechart span=1h max(standTotal)</query>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.chart.nullValueMode">connect</option>
@@ -316,12 +260,10 @@
     <panel>
       <title>Hours Stood Throughout the Day</title>
       <chart>
-        <search>
-          <query>index=$index$ sourcetype=apple:stand name="$name$"
-| dedup uuid
-| timechart span=1h count</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
+        <search base="baseSearch">
+          <query>
+| timechart span=1h max(standTotal) as standTotal 
+| eval standTotal = case(standTotal&gt;=1, 1, 1=1, 0)</query>
         </search>
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
