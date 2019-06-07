@@ -1,15 +1,5 @@
 <form>
   <label>HealthKit Data from Today</label>
-  
-    <search id="baseSearch">
-    <query>
-      index=$index$ sourcetype="apple*" name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent 
-    </query>
-              <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-                    <sampleRatio>1</sampleRatio>
-
-  </search>
   <fieldset submitButton="false">
     <input type="dropdown" token="index">
       <label>Index</label>
@@ -48,10 +38,13 @@
     <panel>
       <title>Total Steps</title>
       <single>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:total:steps") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1d max(steps) as stepsTotal
 | stats sum(stepsTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -63,10 +56,13 @@
     <panel>
       <title>Total Move</title>
       <single>
-        <search base="baseSearch">
-          <query>search index=$index$ sourcetype="apple:total:move" name="$name$"
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:total:move") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1d max(kcal) as moveTotal
 | stats sum(moveTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -75,10 +71,13 @@
     <panel>
       <title>Total Minutes of Exercise</title>
       <single>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND  (sourcetype="apple:exercise") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
 | stats sum(exerciseminutes)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -87,10 +86,13 @@
     <panel>
       <title>Total Stand</title>
       <single>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1d max(standTotal) as standTotal
 | stats sum(standTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -101,11 +103,14 @@
     <panel>
       <title>Most Recent Heart Rate</title>
       <single>
-        <search base="baseSearch">
-          <query>search index=$index$ sourcetype="apple:heartrate" name="$name$"
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
 | head 1
 | table bpm</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -114,11 +119,14 @@
     <panel>
       <title>Total Mindful Seconds</title>
       <single>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:mindful") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid 
 | stats sum(mindfulseconds) as mindfulseconds 
 | eval mindfulseconds=mindfulseconds/60</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -127,10 +135,13 @@
     <panel>
       <title>Battery Percent</title>
       <chart>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:systeminfo") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup sourcetype
 | table batterypercent</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.chart">markerGauge</option>
         <option name="charting.chart.rangeValues">[0,30,70,100]</option>
@@ -143,12 +154,15 @@
     <panel>
       <title>Heart Rate Over Time Today</title>
       <chart>
-        <search base="baseSearch">
-          <query>search index=$index$ sourcetype=apple:heartrate  name="$name$"
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$"  | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
 | bucket span=1m _time
 | stats  max(bpm) as bpm by _time
 | eventstats avg(bpm) as average_bpm</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -189,57 +203,17 @@
     <panel>
       <title>Steps Over Time</title>
       <chart>
-        <search base="baseSearch">
-          <query>search index=iot sourcetype="apple:total:steps" name="Ryan"
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:total:steps") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=5m max(steps) as steps</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.chart">line</option>
-        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.nullValueMode">zero</option>
         <option name="charting.drilldown">none</option>
         <option name="refresh.display">progressbar</option>
-      </chart>
-    </panel>
-    <panel>
-      <title>Steps Walked Throughout the Day</title>
-      <chart>
-        <search base="baseSearch">
-          <query>search index=$index$ sourcetype="apple:steps" name="$name$"
-| dedup  uuid
-| table _time steps
-| timechart span=30m sum(steps) as steps</query>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
-        <option name="charting.axisTitleX.visibility">visible</option>
-        <option name="charting.axisTitleY.visibility">visible</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.scale">linear</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">column</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">default</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="refresh.display">progressbar</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
       </chart>
     </panel>
   </row>
@@ -247,9 +221,12 @@
     <panel>
       <title>Total Hours Standing</title>
       <chart>
-        <search base="baseSearch">
-          <query> 
+        <search>
+          <query>  index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1h max(standTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.chart.nullValueMode">connect</option>
@@ -260,10 +237,13 @@
     <panel>
       <title>Hours Stood Throughout the Day</title>
       <chart>
-        <search base="baseSearch">
-          <query>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1h max(standTotal) as standTotal 
 | eval standTotal = case(standTotal&gt;=1, 1, 1=1, 0)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
