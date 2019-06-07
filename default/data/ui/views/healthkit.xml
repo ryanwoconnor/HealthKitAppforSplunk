@@ -251,4 +251,27 @@
       </chart>
     </panel>
   </row>
+  <row>
+    <panel>
+      <viz type="location_tracker_app.location_tracker">
+        <title>Location</title>
+        <search>
+          <query>sourcetype="apple:systeminfo" name=Ryan 
+| bin _time span=10s 
+| stats max(latitude) as latitude max(longitude) as longitude max(name) as name by _time 
+| makecontinuous span=10s _time 
+| filldown latitude longitude name 
+| table _time latitude longitude name</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="location_tracker_app.location_tracker.interval">10</option>
+        <option name="location_tracker_app.location_tracker.showTraces">1</option>
+        <option name="location_tracker_app.location_tracker.staticIcon">space-shuttle</option>
+        <option name="location_tracker_app.location_tracker.tileSet">openstreetmap_tiles</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+  </row>
 </form>
