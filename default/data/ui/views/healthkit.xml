@@ -253,6 +253,7 @@
   </row>
   <row>
     <panel>
+      <title>Dashboard that shows Location Information if System Info Logging is on. This dashboard uses the following visualization (https://splunkbase.splunk.com/app/3164/)</title>
       <viz type="location_tracker_app.location_tracker">
         <title>Location</title>
         <search>
