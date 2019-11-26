@@ -1,18 +1,24 @@
 <form>
-  <label>HealthKit Data from Today</label>
+  <label>HealthKit Data</label>
+  <search id="base">
+    <query>
+      index="$index$" AND (sourcetype="apple:*") AND name="$name$" | dedup uuid| fields index sourcetype _time uuid name bac decibel
+    </query>
+    <earliest>$field1.earliest$</earliest>
+    <latest>$field1.latest$</latest>
+    <refresh>1s</refresh>
+    <refreshType>delay</refreshType>
+  </search>
   <fieldset submitButton="false">
     <input type="dropdown" token="index">
       <label>Index</label>
       <fieldForLabel>index</fieldForLabel>
       <fieldForValue>index</fieldForValue>
       <search>
-        <query>| eventcount summarize=false index=* | dedup index | fields index | search index!=iot</query>
+        <query>| eventcount summarize=false index=* | dedup index | fields index </query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
-      <choice value="iot">iot</choice>
-      <default>iot</default>
-      <initialValue>iot</initialValue>
     </input>
     <input type="time" token="field1">
       <label></label>
@@ -26,33 +32,15 @@
       <fieldForLabel>name</fieldForLabel>
       <fieldForValue>name</fieldForValue>
       <search>
-        <query>index=$index$ sourcetype=apple* 
+        <query>index="$index$"sourcetype="apple*"
 | dedup uuid sourcetype 
 | stats count by name</query>
-        <earliest>@d</earliest>
+        <earliest>-1d@d</earliest>
         <latest>now</latest>
       </search>
     </input>
   </fieldset>
   <row>
-    <panel>
-      <title>Total Steps</title>
-      <single>
-        <search>
-          <query> index=$index$ AND (sourcetype="apple:total:steps") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
-| timechart span=1d max(steps) as stepsTotal
-| stats sum(stepsTotal)</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </single>
-    </panel>
     <panel>
       <title>Total Move</title>
       <single>
@@ -101,51 +89,39 @@
   </row>
   <row>
     <panel>
-      <title>Most Recent Heart Rate</title>
+      <title>Total Energy Consumed</title>
       <single>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
-| dedup uuid
-| head 1
-| table bpm</query>
-          <earliest>$field1.earliest$</earliest>
-          <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
-      </single>
-    </panel>
-    <panel>
-      <title>Total Mindful Seconds</title>
-      <single>
-        <search>
-          <query> index=$index$ AND (sourcetype="apple:mindful") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ name=$name$ sourcetype="apple:energyconsumed" 
 | dedup uuid 
-| stats sum(mindfulseconds) as mindfulseconds 
-| eval mindfulseconds=mindfulseconds/60</query>
+| bucket span=1h _time 
+| streamstats sum(kcal) as sum 
+| table _time sum</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
       </single>
     </panel>
     <panel>
-      <title>Battery Percent</title>
+      <title>Total Energy Consumed (Over Time)</title>
       <chart>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:systeminfo") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
-| dedup sourcetype
-| table batterypercent</query>
+          <query>index=$index$ AND name="$name$" AND sourcetype="apple:energyconsumed" 
+| sort 0 + _time
+| dedup uuid 
+| table _time kcal sum_for_day 
+| eval time=_time 
+| eval Day=strftime(time, "%m-%d-%Y") 
+| streamstats sum(kcal) as sum_for_day by Day reset_on_change=true
+| table _time  sum_for_day
+| timechart span=5m max(sum_for_day)
+| fillnull value=0</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
-        <option name="charting.chart">markerGauge</option>
-        <option name="charting.chart.rangeValues">[0,30,70,100]</option>
-        <option name="charting.gaugeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
         <option name="refresh.display">progressbar</option>
       </chart>
     </panel>
@@ -155,11 +131,12 @@
       <title>Heart Rate Over Time Today</title>
       <chart>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$"  | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$"  | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
-| bucket span=1m _time
-| stats  max(bpm) as bpm by _time
-| eventstats avg(bpm) as average_bpm</query>
+| bucket span=5m _time
+| stats  max(bpm) as heartrate by _time
+| eventstats avg(heartrate) as average_heartrate
+| eventstats latest(heartrate) as recent_heartrate</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
@@ -198,22 +175,110 @@
         <option name="trellis.size">medium</option>
       </chart>
     </panel>
-  </row>
-  <row>
     <panel>
       <title>Steps Over Time</title>
       <chart>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:total:steps") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
-| timechart span=5m max(steps) as steps</query>
+          <query>index=$index$ AND (sourcetype="apple:total:steps") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+| timechart span=5m max(steps) as Steps
+| eventstats latest(steps) as "Current Step Count"</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="charting.chart">line</option>
-        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.chart.nullValueMode">connect</option>
         <option name="charting.drilldown">none</option>
         <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Workouts</title>
+      <table>
+        <search>
+          <query>index=$index$ sourcetype=apple:workout* name="$name$" 
+| dedup uuid 
+| table _time activity_type duration distance 
+| rename duration as "Duration (Seconds)"
+| eval "Distance (Miles)"=distance/1609.344
+| rename distance as "Distance (Meters)"</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Distance (Miles)">
+          <colorPalette type="minMidMax" maxColor="#53A051" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Environmental Sound Levels</title>
+      <chart>
+        <search>
+          <query>index=$index$ name="$name$" sourcetype=apple* sourcetype="apple:environment:audio"  OR sourcetype="apple:headphone:audio"
+| dedup uuid 
+| timechart span=30m max(decibel) by sourcetype
+| rename "apple:environment:audio" as "Environmental Audio Level"
+| rename "apple:headphone:audio" as "Headphone Audio Level"
+| fillnull value=0</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Most Recent Heart Rate</title>
+      <single>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+| dedup uuid
+| head 1
+| table bpm</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Total Mindful Seconds</title>
+      <single>
+        <search>
+          <query> index=$index$ AND (sourcetype="apple:mindful") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+| dedup uuid 
+| stats sum(mindfulseconds) as mindfulseconds 
+| eval mindfulseconds=mindfulseconds/60</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>BAC (Blood Alcohol Content)</title>
+      <chart>
+        <search base="base">
+          <query>| search sourcetype="apple:bac"| timechart span=15m max(bac)</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
       </chart>
     </panel>
   </row>
@@ -253,26 +318,18 @@
   </row>
   <row>
     <panel>
-      <title>Dashboard that shows Location Information if System Info Logging is on. This dashboard uses the following visualization (https://splunkbase.splunk.com/app/3164/)</title>
-      <viz type="location_tracker_app.location_tracker">
-        <title>Location</title>
+      <title>Body Mass</title>
+      <chart>
         <search>
-          <query>sourcetype="apple:systeminfo" name=Ryan 
-| bin _time span=10s 
-| stats max(latitude) as latitude max(longitude) as longitude max(name) as name by _time 
-| makecontinuous span=10s _time 
-| filldown latitude longitude name 
-| table _time latitude longitude name</query>
+          <query>index=$index$ AND (sourcetype="apple:bodymass") AND name="$name$"
+| timechart span=1d max(weightlb) as "Weight (lb)"</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
         </search>
-        <option name="drilldown">none</option>
-        <option name="location_tracker_app.location_tracker.interval">10</option>
-        <option name="location_tracker_app.location_tracker.showTraces">1</option>
-        <option name="location_tracker_app.location_tracker.staticIcon">space-shuttle</option>
-        <option name="location_tracker_app.location_tracker.tileSet">openstreetmap_tiles</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
         <option name="refresh.display">progressbar</option>
-      </viz>
+      </chart>
     </panel>
   </row>
 </form>

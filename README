@@ -1,3 +1,13 @@
 This app is intended to visualize data from the iOS App called Health Post. 
 
-More information can be found on Splunkbase here https://splunkbase.splunk.com/app/4341/
+To obtain Health Post for your iOS Device, visit the following link:
+https://testflight.apple.com/join/69SKdcRf
+
+In order to setup Health Post, you'll need the following information:
+
+* A Running Splunk instance
+* An HTTP Event Collector Input and Token
+* The URL For your HTTP Event Collector Input
+  * One other key point to note is that when you configure this app - please use the HTTP Event Collector endpoint URL that ends in /services/collector/event. This is important for the sake of making this app work. 
+
+Once this app is setup, you should see data coming into your Splunk instance and this app's main dashboard should start to visualize the data. 
