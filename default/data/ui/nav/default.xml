@@ -2,8 +2,7 @@
  <view name="healthkit" default="true" />
   <view name="data_status_and_troubleshooting" />
   <view name="iphone_system_information" />
+  <view name="healthkit__year_in_review" />
   <view name="search"/>
-  <view name="analysis_workspace" />
-  <view name="alerts" />
-  <view name="dashboards" />
+
 </nav>

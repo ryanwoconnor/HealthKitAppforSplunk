@@ -148,11 +148,12 @@
   </row>
   <row>
     <panel>
-      <title>Number of Operations in Queue</title>
+      <title>Number of Operations in Queues</title>
       <chart>
         <search>
           <query>index=$index$ sourcetype="healthpost:debug" 
-| timechart span=5m max(number_of_operations) as max_operations_5m</query>
+| bucket span=5m _time
+| stats max(number_of_operations) as max_operations_5m max(num_events_in_queue) as max_http_events_in_queue_5m by _time</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
         </search>

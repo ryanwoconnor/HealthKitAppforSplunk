@@ -1,14 +1,5 @@
 <form>
   <label>HealthKit Data</label>
-  <search id="base">
-    <query>
-      index="$index$" AND (sourcetype="apple:*") AND name="$name$" | dedup uuid| fields index sourcetype _time uuid name bac decibel
-    </query>
-    <earliest>$field1.earliest$</earliest>
-    <latest>$field1.latest$</latest>
-    <refresh>1s</refresh>
-    <refreshType>delay</refreshType>
-  </search>
   <fieldset submitButton="false">
     <input type="dropdown" token="index">
       <label>Index</label>
@@ -75,7 +66,8 @@
       <title>Total Stand</title>
       <single>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" 
+| fields sourcetype index name uuid steps kcal exerciseminutes standTotalSeconds standTotal bpm mindfulseconds batterypercent 
 | timechart span=1d max(standTotal) as standTotal
 | stats sum(standTotal)</query>
           <earliest>$field1.earliest$</earliest>
@@ -198,7 +190,7 @@
       <title>Workouts</title>
       <table>
         <search>
-          <query>index=$index$ sourcetype=apple:workout* name="$name$" 
+          <query>index=$index$ sourcetype="apple:workout*" name="$name$" 
 | dedup uuid 
 | table _time activity_type duration distance 
 | rename duration as "Duration (Seconds)"
@@ -222,7 +214,7 @@
       <title>Environmental Sound Levels</title>
       <chart>
         <search>
-          <query>index=$index$ name="$name$" sourcetype=apple* sourcetype="apple:environment:audio"  OR sourcetype="apple:headphone:audio"
+          <query>index=$index$ name="$name$" sourcetype="apple:environment:audio"  OR sourcetype="apple:headphone:audio"
 | dedup uuid 
 | timechart span=30m max(decibel) by sourcetype
 | rename "apple:environment:audio" as "Environmental Audio Level"
@@ -243,7 +235,7 @@
       <title>Most Recent Heart Rate</title>
       <single>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:heartrate") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query> index=$index$ AND sourcetype="apple:heartrate" AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
 | head 1
 | table bpm</query>
@@ -259,7 +251,7 @@
       <title>Total Mindful Seconds</title>
       <single>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:mindful") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query> index=$index$ AND sourcetype="apple:mindful" AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid 
 | stats sum(mindfulseconds) as mindfulseconds 
 | eval mindfulseconds=mindfulseconds/60</query>
@@ -274,8 +266,8 @@
     <panel>
       <title>BAC (Blood Alcohol Content)</title>
       <chart>
-        <search base="base">
-          <query>| search sourcetype="apple:bac"| timechart span=15m max(bac)</query>
+        <search>
+          <query>index="$index$" AND (sourcetype="apple:bac") AND name="$name$" | timechart span=15m max(bac)</query>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.drilldown">none</option>
@@ -287,7 +279,7 @@
       <title>Total Hours Standing</title>
       <chart>
         <search>
-          <query>  index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1h max(standTotal)</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
