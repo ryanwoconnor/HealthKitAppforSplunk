@@ -14,7 +14,7 @@
     <input type="time" token="field1">
       <label></label>
       <default>
-        <earliest>@d</earliest>
+        <earliest>@y</earliest>
         <latest>now</latest>
       </default>
     </input>
@@ -36,12 +36,14 @@
       <title>Total Move</title>
       <single>
         <search>
-          <query> index=$index$ AND (sourcetype="apple:total:move") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ AND (sourcetype="apple:total:move") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | timechart span=1d max(kcal) as moveTotal
 | stats sum(moveTotal)</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -51,12 +53,14 @@
       <title>Total Minutes of Exercise</title>
       <single>
         <search>
-          <query> index=$index$ AND  (sourcetype="apple:exercise") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+          <query>index=$index$ AND  (sourcetype="apple:exercise") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
 | dedup uuid
 | stats sum(exerciseminutes)</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -76,6 +80,8 @@
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
@@ -96,6 +102,8 @@
 | fields avg_stand</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
@@ -115,6 +123,8 @@
 | stats sum("Total Steps") as "Total Steps for Year"</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
@@ -134,6 +144,8 @@
 | fields avg_steps</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
@@ -153,6 +165,8 @@
 | sort 0 - count</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>
@@ -168,6 +182,8 @@
 | stats max(steps) as "Daily Steps" max(kcal) as "Daily Move" max(standTotal) as "Daily Stand" by _time</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.drilldown">none</option>

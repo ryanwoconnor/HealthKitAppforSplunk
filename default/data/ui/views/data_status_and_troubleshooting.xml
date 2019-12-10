@@ -24,13 +24,10 @@
       <fieldForLabel>index</fieldForLabel>
       <fieldForValue>index</fieldForValue>
       <search>
-        <query>| eventcount summarize=false index=* | dedup index | fields index | search index!=iot</query>
+        <query>| eventcount summarize=false index=* | dedup index | fields index </query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
-      <choice value="iot">iot</choice>
-      <default>iot</default>
-      <initialValue>iot</initialValue>
     </input>
     <input type="time" token="field1">
       <label></label>
