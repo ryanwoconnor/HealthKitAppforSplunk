@@ -26,7 +26,7 @@
         <query>index="$index$"sourcetype="apple*"
 | dedup uuid sourcetype 
 | stats count by name</query>
-        <earliest>-1d@d</earliest>
+        <earliest>@y</earliest>
         <latest>now</latest>
       </search>
     </input>
