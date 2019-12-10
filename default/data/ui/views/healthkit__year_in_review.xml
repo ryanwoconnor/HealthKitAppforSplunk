@@ -1,0 +1,194 @@
+<form>
+  <label>HealthKit - Year In Review</label>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="index">
+      <label>Index</label>
+      <fieldForLabel>index</fieldForLabel>
+      <fieldForValue>index</fieldForValue>
+      <search>
+        <query>| eventcount summarize=false index=* | dedup index | fields index </query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="time" token="field1">
+      <label></label>
+      <default>
+        <earliest>@y</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="name" searchWhenChanged="true">
+      <label>Name</label>
+      <fieldForLabel>name</fieldForLabel>
+      <fieldForValue>name</fieldForValue>
+      <search>
+        <query>index="$index$"sourcetype="apple*"
+| dedup uuid sourcetype 
+| stats count by name</query>
+        <earliest>@y</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Total Move</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:total:move") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+| timechart span=1d max(kcal) as moveTotal
+| stats sum(moveTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Total Minutes of Exercise</title>
+      <single>
+        <search>
+          <query>index=$index$ AND  (sourcetype="apple:exercise") AND name="$name$" | fields sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent
+| dedup uuid
+| stats sum(exerciseminutes)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Total Standing Hours</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" 
+| fields sourcetype index name uuid steps kcal exerciseminutes standTotalSeconds standTotal bpm mindfulseconds batterypercent 
+| bucket span=1d _time 
+| stats max(standTotal) as standTotal by _time
+| stats sum(standTotal)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Hours</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Daily Average Stand</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:total:stand") AND name="$name$" 
+| fields sourcetype index name uuid steps kcal exerciseminutes standTotalSeconds standTotal bpm mindfulseconds batterypercent 
+| bucket span=1d _time 
+| stats max(standTotal) as standTotal by _time
+| stats sum(standTotal) as standTotal
+| eval avg_stand = standTotal/365
+| fields avg_stand</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Hours/Day</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Total Steps</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:total:steps") name="$name$"
+| bucket span=1d _time 
+| stats max(steps) as "Total Steps" by _time
+| stats sum("Total Steps") as "Total Steps for Year"</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Steps</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Daily Average Steps</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:total:steps") name="$name$"
+| bucket span=1d _time 
+| stats max(steps) as "Total Steps" by _time
+| stats sum("Total Steps") as "Total Steps for Year"
+| eval avg_steps='Total Steps for Year'/365
+| fields avg_steps</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">Steps/Day</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Number of Workouts</title>
+      <table>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple:workout*") name="$name$"
+| dedup uuid 
+| stats count by activity_type 
+| sort 0 - count</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Daily Totals</title>
+      <chart>
+        <search>
+          <query>index=$index$ AND name="$name$" AND sourcetype=apple:total:* 
+| bucket span=1d _time 
+| stats max(steps) as "Daily Steps" max(kcal) as "Daily Move" max(standTotal) as "Daily Stand" by _time</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,137 @@
+<form>
+  <label>iPhone System Information</label>
+  <search id="base">
+    <query>
+      index="$index$" AND (sourcetype="apple:systeminfo") AND name="$name$" | fields _time sourcetype index name uuid steps kcal exerciseminutes standTotal bpm mindfulseconds batterypercent latitude lowpower_mode charging altitude_meters longitude speed_meters_per_second
+    </query>
+    <earliest>$field1.earliest$</earliest>
+    <latest>$field1.latest$</latest>
+    <refresh>1s</refresh>
+    <refreshType>delay</refreshType>
+  </search>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="index">
+      <label>Index</label>
+      <fieldForLabel>index</fieldForLabel>
+      <fieldForValue>index</fieldForValue>
+      <search>
+        <query>| eventcount summarize=false index=* | dedup index | fields index </query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="time" token="field1">
+      <label></label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="name" searchWhenChanged="true">
+      <label>Name</label>
+      <fieldForLabel>name</fieldForLabel>
+      <fieldForValue>name</fieldForValue>
+      <search>
+        <query>index="$index$"sourcetype="apple*"
+| dedup uuid sourcetype 
+| stats count by name</query>
+        <earliest>-1d@d</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Latest Battery Level</title>
+      <chart>
+        <search base="base">
+          <query>
+
+| stats latest(batterypercent)</query>
+        </search>
+        <option name="charting.chart">markerGauge</option>
+        <option name="charting.chart.rangeValues">[0,30,70,100]</option>
+        <option name="charting.gaugeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Traveling Speed</title>
+      <table>
+        <search base="base">
+          <query>
+| stats avg(speed_meters_per_second) as avg_speed min(speed_meters_per_second) as min_speed max(speed_meters_per_second) as max_speed 
+| eval "Minimum Speed (Miles/Hour)" = (min_speed*2.236936) 
+| eval "Avg Speed (Miles/Hour)" = (avg_speed*2.236936) 
+| eval "Maximum Speed (Miles/Hour)" = (max_speed*2.236936) 
+| fields + *Miles*</query>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Dashboard that shows Location Information if System Info Logging is on. This dashboard uses the following visualization (https://splunkbase.splunk.com/app/3164/)</title>
+      <viz type="location_tracker_app.location_tracker">
+        <title>Location</title>
+        <search base="base">
+          <query>
+| bin _time span=10s 
+| stats max(latitude) as latitude max(longitude) as longitude max(name) as name by _time 
+| makecontinuous span=10s _time 
+| filldown latitude longitude name 
+| table _time latitude longitude name</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="location_tracker_app.location_tracker.interval">10</option>
+        <option name="location_tracker_app.location_tracker.showTraces">1</option>
+        <option name="location_tracker_app.location_tracker.staticIcon">space-shuttle</option>
+        <option name="location_tracker_app.location_tracker.tileSet">openstreetmap_tiles</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Charging Information</title>
+      <chart>
+        <search base="base">
+          <query>
+| timechart span=5m max(batterypercent) as "Battery Level" 
+| join _time 
+    [ search earliest=$field1.earliest$ latest=$field1.latest$ index=$index$ name=$name$ AND (sourcetype="apple:systeminfo") 
+    | eval charging=case(charging=="true", 100, 1=1, 0) 
+    | timechart span=5m max(charging) as "Charging"] 
+| join _time 
+    [ search earliest=$field1.earliest$ latest=$field1.latest$ index=$index$ name=$name$ AND (sourcetype="apple:systeminfo") 
+    | eval lowpower_mode=case(lowpower_mode=="Charging", 100, 1=1, 0) 
+    | timechart span=5m max(lowpower_mode) as "Lowpower Mode"] 
+| fillnull value=0</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Altitude</title>
+      <chart>
+        <search base="base">
+          <query>
+| timechart span=5m max(altitude_meters) as altitude
+| fillnull value=0</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>

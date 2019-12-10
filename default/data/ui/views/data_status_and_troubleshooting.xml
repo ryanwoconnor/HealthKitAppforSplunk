@@ -1,0 +1,164 @@
+<form>
+  <label>Data Status and Troubleshooting</label>
+  <search id="locations">
+    <query>
+      index=$index$ AND (sourcetype="apple:system*") AND name="$name$" | table _time latitude longitude  
+    </query>
+    <earliest>$field1.earliest$</earliest>
+    <latest>$field1.latest$</latest>
+    <refresh>1s</refresh>
+    <refreshType>delay</refreshType>
+  </search>
+  <search id="base">
+    <query>
+      index="$index$" AND (sourcetype="apple:*") AND name="$name$" | dedup uuid| fields index sourcetype _time uuid name bac decibel
+    </query>
+    <earliest>$field1.earliest$</earliest>
+    <latest>$field1.latest$</latest>
+    <refresh>1s</refresh>
+    <refreshType>delay</refreshType>
+  </search>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="index">
+      <label>Index</label>
+      <fieldForLabel>index</fieldForLabel>
+      <fieldForValue>index</fieldForValue>
+      <search>
+        <query>| eventcount summarize=false index=* | dedup index | fields index </query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="time" token="field1">
+      <label></label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Latest Event</title>
+      <single>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple*") 
+| head 1 
+| table _time
+| eval time =strftime(_time,"%Y-%m-%d %H:%M:%S.%Q")</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>2s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0.0000</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showTrendIndicator">0</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Count of Sourcetypes</title>
+      <chart>
+        <search>
+          <query>index=$index$ AND (sourcetype="apple*") | stats count by sourcetype | sort 0 - count</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Sourcetypes Over Time</title>
+      <chart>
+        <search>
+          <query>index=$index$ sourcetype=apple* | timechart span=5m count by sourcetype useother=false</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <h1>Panels for the Healthpost Debug Sourcetype</h1>
+    <p>Note: These panels are based on indexing the apps internal logs from the Logs View inside of the iOS App</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Timechart of Events</title>
+      <chart>
+        <search>
+          <query>index=$index$ sourcetype="healthpost:debug" status_code=200 
+| timechart span=5m count as successful_data_send
+| join _time 
+    [ search
+        index=$index$ sourcetype="healthpost:debug" "Received silent push notification" 
+    | timechart span=20m count as silent_push_received] 
+| join _time 
+    [ search
+        index=$index$ sourcetype="healthpost:debug" "Location Updated"
+    | timechart span=20m count as location_updated] 
+| fields - _timediff</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Count of Messages in Logs</title>
+      <table>
+        <search>
+          <query>index=$index$ sourcetype="healthpost:debug" _raw!="*New Location is*" _raw!="*Throttling Location*"
+| rex field=_raw ".*\]:(?&lt;message&gt;.*)" 
+| stats count by message 
+| sort 0 - count</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Number of Operations in Queues</title>
+      <chart>
+        <search>
+          <query>index=$index$ sourcetype="healthpost:debug" 
+| bucket span=5m _time
+| stats max(number_of_operations) as max_operations_5m max(num_events_in_queue) as max_http_events_in_queue_5m by _time</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>
